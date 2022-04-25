@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<style>
+    iframe, textarea {
+        width: 100%;
+        height: 600px;
+    }
+</style>
+<body>
+    Actions:
+    <br/>
+    <button id="create">CREATE</button>
+    <button id="read">READ</button>
+    <button id="update">UPDATE</button>
+    <button id="delete">DELETE</button>
+    <button id="clear">clear</button>
+    <br/><br/>
+    Logger:
+    <br/>
+    <textarea id="log"></textarea>
+</body>
+<script>
+    const URL = 'http://localhost:3000/storage/';
+    const keys = ['foo', 'bar', 'baz', 'var', 'test', 'alex'];
+    const getRandomKey = () => {
+        return keys[Math.round(Math.random() * (keys.length - 1))];
+    }
+    const getRandomValue = () => {
+        return Math.round(Math.random() * 10000).toString(16);
+    }
+
+    window.addEventListener('load', () => {
+        const logger = document.getElementById('log');
+        let lineNum = 0;
+        const log = (message) => {
+            lineNum += 1;
+            logger.value += `${lineNum}. ${message}\n`;
+        }
+
+        if (EventSource) {
+            const evtSource = new EventSource(`${URL}stream/sse/`);
+            evtSource.onmessage = (event) => {
+                log(`STREAM: ${event.data}`);
+            };
+            evtSource.onerror = function(err) {
+                log("EventSource failed");
+                console.error(err);
+            };
+        } else {
+            log('STREAM is not supported');
+        }
+
+        const showResponse = (resp) => {
+            console.log(resp);
+            log(`RESPONSE: ${resp.request.status}, ${resp.request.statusText}, ${resp.request.responseText}`);
+        }
+
+        const error = (...args) => {
+            console.log(args);
+        }
+
+        document.getElementById('clear').onclick = () => {
+            logger.value = '';
+        }
+
+        document.getElementById('read').onclick = () => {
+            const key = getRandomKey();
+            log(`REQUEST: READ ${key}`);
+            axios.get(URL + key).then(showResponse).catch(showResponse);
+        }
+
+        document.getElementById('create').onclick = () => {
+            const key = getRandomKey();
+            const value = getRandomValue();
+            log(`REQUEST: CREATE ${key} ${value}`);
+            axios.put(URL + key, { value }).then(showResponse).catch(showResponse);
+        }
+
+        document.getElementById('update').onclick = () => {
+            const key = getRandomKey();
+            const value = getRandomValue();
+            log(`REQUEST: UPDATE ${key} ${value}`);
+            axios.post(URL + key, { value }).then(showResponse).catch(showResponse);
+        }
+
+        document.getElementById('delete').onclick = () => {
+            const key = getRandomKey();
+            log(`REQUEST: DELETE ${key}`);
+            axios.delete(URL + key).then(showResponse).catch(showResponse);
+        }
+    });
+</script>
+</html>
